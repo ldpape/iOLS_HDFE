@@ -5,5 +5,5 @@ To install this code into Stata, run the following (requires at least Stata 14) 
 
 >cap ado uninstall iOLS_HDFE
 
->net install iOLS_HDFE, from("https://raw.githubusercontent.com/ldpape/HDFE/master/")
+>net install iOLS_HDFE, from("https://raw.githubusercontent.com/ldpape/iOLS_HDFE/master/")
 
