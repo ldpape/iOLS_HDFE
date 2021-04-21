@@ -71,7 +71,7 @@ dependent variable with M_FE being the residual making matrix associated with th
 
 {pstd} Convergence is decided based on coefficients (sum of squared coefficients < 1e-15) and not on the modulus of the contraction mapping.
 
-{pstd} The {help test} postestimation commands are available after {cmd:iOLS_HDFE}.  This command yields 'xb' using "predict xb, xb" . To obtain y_hat, you will need to also run "gen y_hat = exp(xb)".
+{pstd} The {help test} postestimation commands are available after {cmd:iOLS_HDFE}.  This command yields 'x_1b' using "predict xb, xb"  and the aggregate fixed effect 'fe'. To obtain y_hat, you will need to also run "gen y_hat = exp(xb+fe)".
 
 {marker contact}{...}
 {title:Authors}
