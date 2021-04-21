@@ -53,9 +53,9 @@ may be classical (assuming homoskedasticity), {opt r:obust}, or {opt cl:uster} (
 {title:Background}
 
 {pstd}
-{cmd: iOLS_HDFE} estimates iOLS_delta, a solution to the problem of the log of zero.  This method relies on running the "regress" function iteratively. This 
-This provides the reader with the final OLS estimates and allows the use the post-estimation commands available under regress (using Y_tilde = log(Y + delta*exp(xb))) as a 
-dependent variable.  The benefit of using "regress" comes at the cost of limited capacity to deal with many fixed effects. In such a case, iOLS_hdfe may be more appropriate.
+{cmd: iOLS_HDFE} estimates iOLS_delta, a solution to the problem of the log of zero.  This method relies on running the "regress" function iteratively whilst simultaneously partialling out
+the fixed effects. This provides the reader with the final OLS estimates and allows the use the post-estimation commands available under regress (using M_FE * Y_tilde = log(Y + delta*exp(xb))) as a 
+dependent variable with M_FE being the residual making matrix associated with the fixed effect variables. 
 
 {synoptset 22}{...}
 {synopthdr: variables}
@@ -69,7 +69,7 @@ dependent variable.  The benefit of using "regress" comes at the cost of limited
 {marker caveats}{...}
 {title:Caveats}
 
-{pstd} Convergence is decided based on coefficients (sum of squared coefficients < 1e-6) and not on the modulus of the contraction mapping.
+{pstd} Convergence is decided based on coefficients (sum of squared coefficients < 1e-15) and not on the modulus of the contraction mapping.
 
 {pstd} The {help test} postestimation commands are available after {cmd:iOLS_HDFE}.  This command yields 'xb' using "predict xb, xb" . To obtain y_hat, you will need to also run "gen y_hat = exp(xb)".
 
