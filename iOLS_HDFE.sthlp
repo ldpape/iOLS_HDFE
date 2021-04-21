@@ -35,6 +35,11 @@
 may be classical (assuming homoskedasticity), {opt r:obust}, or {opt cl:uster} (allowing two- and multi-way clustering){p_end}
 {syntab: Delta}
 {synopt:{opt delta}{cmd:(}{help iOLS_HDFE##delta:delta}{cmd:)}}{it:delta} is any strictly positive constant. {p_end}
+{syntab: Delta}
+{synopt:{opt absorb}{cmd:(}{help iOLS_HDFE##absorb:absorb}{cmd:)}}{it:absorb} include binary and categorical variables. You can generate an interaction between two categories with
+"egen group_fe = group(var1 var2)". {p_end}
+
+
 
 {marker description}{...}
 {title:Description}
