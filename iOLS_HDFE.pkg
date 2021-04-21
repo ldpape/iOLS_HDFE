@@ -4,5 +4,4 @@ d iOLS_HDFE
 d Program to run large sample iOLS
 d Distribution-Date: 22 April 2021
 f iOLS_HDFE.ado
-
-
+f iOLS_HDFE.sthlp
