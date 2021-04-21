@@ -16,7 +16,7 @@
 {title:Title}
 
 {p2colset 5 18 20 2}{...}
-{p2col :{cmd:iOLS_HDFE} {hline 2}} Iterated Ordinary Least Squares (iOLS) with High Diemnsional Fixed Effects (HDFE) with delta {p_end}
+{p2col :{cmd:iOLS_HDFE} {hline 2}} Iterated Ordinary Least Squares (iOLS) with High Dimensional Fixed Effects (HDFE) with delta {p_end}
 {p2colreset}{...}
 
 {marker syntax}{...}
