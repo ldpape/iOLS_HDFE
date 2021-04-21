@@ -5,41 +5,41 @@
 {vieweralsosee "reghdfe" "help reghdfe"}{...}
 {vieweralsosee "ppml" "help ppml"}{...}
 {vieweralsosee "ppmlhdfe" "help ppmlhdfe"}{...}
-{viewerjumpto "Syntax" "iOLS_OLS##syntax"}{...}
-{viewerjumpto "Description" "iOLS_OLS##description"}{...}
-{viewerjumpto "Citation" "iOLS_OLS##citation"}{...}
-{viewerjumpto "Authors" "iOLS_OLS##contact"}{...}
-{viewerjumpto "Examples" "iOLS_OLS##examples"}{...}
-{viewerjumpto "Description" "iOLS_OLS##Testing"}{...}
-{viewerjumpto "Stored results" "iOLS_OLS##results"}{...}
+{viewerjumpto "Syntax" "iOLS_HDFE##syntax"}{...}
+{viewerjumpto "Description" "iOLS_HDFE##description"}{...}
+{viewerjumpto "Citation" "iOLS_HDFE##citation"}{...}
+{viewerjumpto "Authors" "iOLS_HDFE##contact"}{...}
+{viewerjumpto "Examples" "iOLS_HDFE##examples"}{...}
+{viewerjumpto "Description" "iOLS_HDFE##Testing"}{...}
+{viewerjumpto "Stored results" "iOLS_HDFE##results"}{...}
 
 {title:Title}
 
 {p2colset 5 18 20 2}{...}
-{p2col :{cmd:iOLS_OLS} {hline 2}} Iterated Ordinary Least Squares (iOLS) with delta {p_end}
+{p2col :{cmd:iOLS_HDFE} {hline 2}} Iterated Ordinary Least Squares (iOLS) with High Diemnsional Fixed Effects (HDFE) with delta {p_end}
 {p2colreset}{...}
 
 {marker syntax}{...}
 {title:Syntax}
 
-{p 8 15 2} {cmd:iOLS_OLS}
+{p 8 15 2} {cmd:iOLS_HDFE}
 {depvar} [{indepvars}]
-{ifin} {it:{weight}} {cmd:,} [{help iOLS_OLS##options:options}] {p_end}
+{ifin} {it:{weight}} {cmd:,} [{help iOLS_HDFE##options:options}] {p_end}
 
 {marker opt_summary}{...}
 {synoptset 22 tabbed}{...}
 {synopthdr}
 {synoptline}
 {syntab: Standard Errors: Classical/Robust/Clustered}
-{synopt:{opt vce}{cmd:(}{help iOLS_OLS##opt_vce:vcetype}{cmd:)}}{it:vcetype}
+{synopt:{opt vce}{cmd:(}{help iOLS_HDFE##opt_vce:vcetype}{cmd:)}}{it:vcetype}
 may be classical (assuming homoskedasticity), {opt r:obust}, or {opt cl:uster} (allowing two- and multi-way clustering){p_end}
 {syntab: Delta}
-{synopt:{opt delta}{cmd:(}{help iOLS_OLS##delta:delta}{cmd:)}}{it:delta} is any strictly positive constant. {p_end}
+{synopt:{opt delta}{cmd:(}{help iOLS_HDFE##delta:delta}{cmd:)}}{it:delta} is any strictly positive constant. {p_end}
 
 {marker description}{...}
 {title:Description}
 
-{pstd}{cmd:iOLS_OLS} iterated Ordinary Least Squares with delta, as described by {browse "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3444996":Bellego, Benatia, and Pape (2021)}.
+{pstd}{cmd:iOLS_HDFE} iterated Ordinary Least Squares with High Dimensional Fixed Effects and delta, as described by {browse "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3444996":Bellego, Benatia, and Pape (2021)}.
 
 {pstd} This package:
 
@@ -51,7 +51,7 @@ may be classical (assuming homoskedasticity), {opt r:obust}, or {opt cl:uster} (
 {title:Background}
 
 {pstd}
-{cmd: iOLS_OLS} estimates iOLS_delta, a solution to the problem of the log of zero.  This method relies on running the "regress" function iteratively.
+{cmd: iOLS_HDFE} estimates iOLS_delta, a solution to the problem of the log of zero.  This method relies on running the "regress" function iteratively. This 
 This provides the reader with the final OLS estimates and allows the use the post-estimation commands available under regress (using Y_tilde = log(Y + delta*exp(xb))) as a 
 dependent variable.  The benefit of using "regress" comes at the cost of limited capacity to deal with many fixed effects. In such a case, iOLS_hdfe may be more appropriate.
 
@@ -69,7 +69,7 @@ dependent variable.  The benefit of using "regress" comes at the cost of limited
 
 {pstd} Convergence is decided based on coefficients (sum of squared coefficients < 1e-6) and not on the modulus of the contraction mapping.
 
-{pstd} The {help test} postestimation commands are available after {cmd:iOLS_OLS}.  This command yields 'xb' using "predict xb, xb" . To obtain y_hat, you will need to also run "gen y_hat = exp(xb)".
+{pstd} The {help test} postestimation commands are available after {cmd:iOLS_HDFE}.  This command yields 'xb' using "predict xb, xb" . To obtain y_hat, you will need to also run "gen y_hat = exp(xb)".
 
 {marker contact}{...}
 {title:Authors}
@@ -94,7 +94,7 @@ Available at SSRN: https://ssrn.com/abstract=3444996
 {p_end}
 {hline}
 {phang2}{cmd:. use "http://www.stata-press.com/data/r14/airline"}{p_end}
-{phang2}{cmd:. iOLS_OLS injuries XYZowned, delta(1) robust}{p_end}
+{phang2}{cmd:. iOLS_HDFE injuries XYZowned, delta(1) robust}{p_end}
 {phang2}{cmd:. poisson injuries XYZowned, robust}{p_end}
 {hline}
 
@@ -106,11 +106,11 @@ to study the effect of cost of transportation (tcost).
 {phang2}{cmd:. webuse trip }{p_end}
 {phang2}{cmd:. gen outside = trips>0 }{p_end}
 
-{phang2}{cmd:. iOLS_OLS trips cbd ptn worker weekend tcost, delta(1) robust }{p_end}
+{phang2}{cmd:. iOLS_HDFE trips cbd ptn worker weekend tcost, delta(1) robust }{p_end}
 
 {phang2}{cmd:. cap program drop iOLS_bootstrap  }{p_end}
 {phang2}{cmd:. program iOLS_bootstrap, rclass  }{p_end}
-{phang2}{cmd:. iOLS_OLS trips cbd ptn worker weekend tcost , delta(1) robust  }{p_end}
+{phang2}{cmd:. iOLS_HDFE trips cbd ptn worker weekend tcost , delta(1) robust  }{p_end}
 {phang2}{cmd:. scalar delta = 1  }{p_end}
 {phang2}{cmd:. *lhs of test  }{p_end}
 {phang2}{cmd:. predict xb_temp, xb  }{p_end}
@@ -168,8 +168,8 @@ to study the effect of cost of transportation (tcost).
 {p_end}
 {hline}
 {phang2}{cmd:. eststo clear}{p_end}
-{phang2}{cmd:. eststo: iOLS_OLS trips cbd ptn worker weekend tcost, delta(1) robust }{p_end}
-{phang2}{cmd:. eststo: iOLS_OLS trips cbd ptn worker weekend tcost, delta(10) robust }{p_end}
+{phang2}{cmd:. eststo: iOLS_HDFE trips cbd ptn worker weekend tcost, delta(1) robust }{p_end}
+{phang2}{cmd:. eststo: iOLS_HDFE trips cbd ptn worker weekend tcost, delta(10) robust }{p_end}
 {phang2}{cmd:. eststo: esttab * using table.tex,  scalars(delta eps) }{p_end}
 {hline}
 
@@ -177,7 +177,7 @@ to study the effect of cost of transportation (tcost).
 {title:Stored results}
 
 {pstd}
-{cmd:iOLS_OLS} stores the following in {cmd:e()}:
+{cmd:iOLS_HDFE} stores the following in {cmd:e()}:
 
 {synoptset 24 tabbed}{...}
 {syntab:Scalars}
@@ -185,4 +185,3 @@ to study the effect of cost of transportation (tcost).
 {synopt:{cmd:e(sample)}} marks the sample used for estimation {p_end}
 {synopt:{cmd:e(eps)}} sum of the absolute differences between the parameters from the last two iterations of iOLS {p_end}
 {synopt:{cmd:e(k)}} number of iterations of iOLS{p_end}
-
