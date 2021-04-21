@@ -47,6 +47,8 @@ may be classical (assuming homoskedasticity), {opt r:obust}, or {opt cl:uster} (
 
 {pmore} 2. assumes the iOLS exogeneity condition with delta E(X'log(delta+U)) = constant. {p_end}
 
+{pmore} 3. allows for high dimensional fixed effects. {p_end}
+
 
 {title:Background}
 
