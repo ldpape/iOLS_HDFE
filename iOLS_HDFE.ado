@@ -141,7 +141,6 @@ ereturn local vcetype `option'
 ereturn display
 * drop 
 	cap drop M0_* 
-	cap drop fe
 	cap drop Y0_*
 	cap drop xb_hat*
 end
