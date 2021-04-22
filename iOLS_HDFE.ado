@@ -48,7 +48,7 @@ program define iOLS_HDFE, eclass
 	quietly predict xb_hat,xb
 			*** ItÃ©rations iOLS
 	_dots 0
-	while (`k' < 1000 & `eps' > 1e-100){	
+	while (`k' < 1000 & `eps' > 1e-15){	
 		matrix beta_initial = beta_new
 		* calcul de constante
 		tempvar temp1
@@ -93,12 +93,12 @@ program define iOLS_HDFE, eclass
 		_dots `k' 0	
 	}
  *** Calcul de la matrice de variance-covariance
- 	foreach var in `indepvar' {  // rename variables for last ols
+ 	foreach var in `indepvar' {     // rename variables for last ols
 	quietly	rename `var' TEMP_`var'
 	quietly	rename M0_`var' `var'
 	}	
 	quietly	reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'   noconstant
-	foreach var in `indepvar' { // rename variables back
+	foreach var in `indepvar'{      // rename variables back
 	quietly	rename `var' M0_`var'
 	quietly	rename TEMP_`var' `var'
 	}
@@ -119,7 +119,7 @@ program define iOLS_HDFE, eclass
 	*gen `cste' = 1
 	tempvar ui_bis
 	quietly gen `ui_bis' = 1 - `delta'/(`delta' + `ui')
-	local var_list M0_* //`cste'
+	local var_list M0_*    //`cste'
 	mata : X=.
 	mata : IW=.
 	mata : st_view(X,.,"`var_list'")
@@ -133,7 +133,7 @@ program define iOLS_HDFE, eclass
 	matrix Sigma_tild = Sigma_tild*((`e(df_r)')/(`N_DF')) // adjust DOF
 	*matrix list Sigma_tild
 	*di `e(df_r)'
-	di `N_DF'
+	*di `N_DF'
 	*** Stocker les resultats dans une matrice
 	local names : colnames e(b)
 	local nbvar : word count `names'
