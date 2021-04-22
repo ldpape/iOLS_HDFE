@@ -93,6 +93,15 @@ program define iOLS_HDFE, eclass
 		_dots `k' 0	
 	}
  *** Calcul de la matrice de variance-covariance
+ 	foreach var in `indepvar' { // rename variables for last ols
+	quietly	rename `var' TEMP_`var'
+	quietly	rename M0_`var' `var'
+	}	
+	quietly	reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'   noconstant
+	foreach var in `indepvar' { // rename variables back
+	quietly	rename `var' M0_`var'
+	quietly	rename TEMP_`var' `var'
+	
 	preserve
 	keep if e(sample)	
 	* matrice de beta
