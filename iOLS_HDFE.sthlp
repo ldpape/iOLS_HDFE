@@ -23,7 +23,7 @@
 {title:Syntax}
 
 {p 8 15 2} {cmd:iOLS_HDFE}
-{depvar} [{indepvars}]
+{depvar} [{indepvars}][{absorb}]
 {ifin} {it:{weight}} {cmd:,} [{help iOLS_HDFE##options:options}] {p_end}
 
 {marker opt_summary}{...}
@@ -96,16 +96,8 @@ Available at SSRN: https://ssrn.com/abstract=3444996
 {marker examples}{...}
 {title:Examples}
 
-{pstd} First, we will replicate Example 1 from Stata's
-{browse "https://www.stata.com/manuals/rpoisson.pdf":poisson manual}.
-{p_end}
-{hline}
-{phang2}{cmd:. use "http://www.stata-press.com/data/r14/airline"}{p_end}
-{phang2}{cmd:. iOLS_HDFE injuries XYZowned, delta(1) robust}{p_end}
-{phang2}{cmd:. poisson injuries XYZowned, robust}{p_end}
-{hline}
 
-{pstd} Second, we show how to test for the pattern of zeros with iOLS. We use data on households' trips away from home, as used in {browse "https://www.stata.com/manuals/rivpoisson.pdf":ivpoisson manual}.
+{pstd} We use data on households' trips away from home, as used in {browse "https://www.stata.com/manuals/rivpoisson.pdf":ivpoisson manual}.
 to study the effect of cost of transportation (tcost). 
 {p_end}
 {hline}
@@ -113,72 +105,7 @@ to study the effect of cost of transportation (tcost).
 {phang2}{cmd:. webuse trip }{p_end}
 {phang2}{cmd:. gen outside = trips>0 }{p_end}
 
-{phang2}{cmd:. iOLS_HDFE trips cbd ptn worker weekend tcost, delta(1) robust }{p_end}
-
-{phang2}{cmd:. cap program drop iOLS_bootstrap  }{p_end}
-{phang2}{cmd:. program iOLS_bootstrap, rclass  }{p_end}
-{phang2}{cmd:. iOLS_HDFE trips cbd ptn worker weekend tcost , delta(1) robust  }{p_end}
-{phang2}{cmd:. scalar delta = 1  }{p_end}
-{phang2}{cmd:. *lhs of test  }{p_end}
-{phang2}{cmd:. predict xb_temp, xb  }{p_end}
-{phang2}{cmd:. gen u_hat_temp = trips*exp(-xb_temp)  }{p_end}
-{phang2}{cmd:. gen lhs_temp = log(delta+u_hat_temp) - log(delta)  }{p_end}
-{phang2}{cmd:. * rhs of test  }{p_end}
-{phang2}{cmd:. gen temp = log(trips + delta*exp(xb_temp)) - xb_temp  }{p_end}
-{phang2}{cmd:. egen c_hat_temp = mean(temp)   }{p_end}
-{phang2}{cmd:. logit outside cbd ptn worker weekend tcost }{p_end}
-{phang2}{cmd:. predict p_hat_temp, pr  }{p_end}
-{phang2}{cmd:. gen rhs_temp = (c_hat_temp-log(delta))/p_hat_temp  }{p_end}
-{phang2}{cmd:. * run the test  }{p_end}
-{phang2}{cmd:. reg lhs_temp rhs_temp if outside, nocons   }{p_end}
-{phang2}{cmd:. matrix b = e(b)  }{p_end}
-{phang2}{cmd:. ereturn post b  }{p_end}
-{phang2}{cmd:. * drop created variables  }{p_end}
-{phang2}{cmd:. cap drop *temp  }{p_end}
-{phang2}{cmd:. end  }{p_end}
-
-{phang2}{cmd:. bootstrap lambda = _b[rhs_temp] , reps(50): iOLS_bootstrap  }{p_end}
-{phang2}{cmd:. test lambda==1  }{p_end}
-{hline}
-
-{pstd} Third, we show how to test for the pattern of zeros using Poisson regression.
-{p_end}
-{hline}
-{phang2}{cmd:. poisson trips cbd ptn worker weekend tcost , robust  }{p_end}
-
-{phang2}{cmd:. cap program drop Poisson_bootstrap }{p_end}
-{phang2}{cmd:. program Poisson_bootstrap, rclass  }{p_end}
-{phang2}{cmd:. estimate the model  }{p_end}
-{phang2}{cmd:. poisson trips cbd ptn worker weekend tcost , robust  }{p_end}
-{phang2}{cmd:. lhs of test  }{p_end}
-{phang2}{cmd:. predict xb_temp, xb  }{p_end}
-{phang2}{cmd:. gen u_hat_temp = wage*exp(-xb_temp)  }{p_end}
-{phang2}{cmd:. egen mean_u_temp = mean(u_hat_temp)  }{p_end}
-{phang2}{cmd:. gen lhs_temp = u_hat_temp*exp(-xb_temp)  }{p_end}
-{phang2}{cmd:. rhs of test  }{p_end}
-{phang2}{cmd:. logit outside trips cbd ptn worker weekend tcost}{p_end}
-{phang2}{cmd:. predict p_hat_temp, pr  }{p_end}
-{phang2}{cmd:. gen rhs_temp = (mean_u_temp)/p_hat_temp  }{p_end}
-{phang2}{cmd:. run the test  }{p_end}
-{phang2}{cmd:. reg lhs_temp rhs_temp if outside, nocons   }{p_end}
-{phang2}{cmd:. matrix b = e(b)  }{p_end}
-{phang2}{cmd:. ereturn post b  }{p_end}
-{phang2}{cmd:. drop created variables  }{p_end}
-{phang2}{cmd:. cap drop *temp  }{p_end}
-{phang2}{cmd:. end  }{p_end}
-
-{phang2}{cmd:. bootstrap lambda = _b[rhs_temp] , reps(50): Poisson_bootstrap  }{p_end}
-{phang2}{cmd:. test lambda==1  }{p_end}
-{hline}
-
-{pstd} Fourth, you can convert your results into latex using esttab where "eps" provides the convergence criteria:
-{p_end}
-{hline}
-{phang2}{cmd:. eststo clear}{p_end}
-{phang2}{cmd:. eststo: iOLS_HDFE trips cbd ptn worker weekend tcost, delta(1) robust }{p_end}
-{phang2}{cmd:. eststo: iOLS_HDFE trips cbd ptn worker weekend tcost, delta(10) robust }{p_end}
-{phang2}{cmd:. eststo: esttab * using table.tex,  scalars(delta eps) }{p_end}
-{hline}
+{phang2}{cmd:. iOLS_HDFE trips cbd ptn tcost, delta(1) robust absorb(worker weekend) }{p_end}
 
 {marker results}{...}
 {title:Stored results}
