@@ -116,7 +116,7 @@ program define iOLS_HDFE, eclass
 	tempvar ui
     gen `ui' = `depvar'*exp(- xb_hat - `phi_hat')
 	tempvar cste
-	gen `cste' = 1
+	*gen `cste' = 1
 	tempvar ui_bis
 	quietly gen `ui_bis' = 1 - `delta'/(`delta' + `ui')
 	local var_list M0_* //`cste'
