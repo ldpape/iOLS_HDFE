@@ -72,7 +72,7 @@ program define iOLS_HDFE, eclass
 		* Update fixed effects	
 	cap drop xb_hat_M xb_hat_N
 	quietly predict xb_hat_M, xb		// predict with demeaned
-		foreach var in `indepvar' { // rename variables for prediction
+	foreach var in `indepvar' { // rename variables for prediction
 	quietly	rename M0_`var' TEMP`var'
 	quietly	rename `var' M0_`var'
 	}
@@ -93,7 +93,7 @@ program define iOLS_HDFE, eclass
 		_dots `k' 0	
 	}
  *** Calcul de la matrice de variance-covariance
- 	foreach var in `indepvar' { // rename variables for last ols
+ 	foreach var in `indepvar' {  // rename variables for last ols
 	quietly	rename `var' TEMP_`var'
 	quietly	rename M0_`var' `var'
 	}	
@@ -101,7 +101,7 @@ program define iOLS_HDFE, eclass
 	foreach var in `indepvar' { // rename variables back
 	quietly	rename `var' M0_`var'
 	quietly	rename TEMP_`var' `var'
-	
+	}
 	preserve
 	keep if e(sample)	
 	* matrice de beta
