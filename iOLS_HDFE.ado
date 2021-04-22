@@ -48,7 +48,7 @@ program define iOLS_HDFE, eclass
 	quietly predict xb_hat,xb
 			*** ItÃ©rations iOLS
 	_dots 0
-	while (`k' < 1000 & `eps' > 1e-15){	
+	while (`k' < 1000 & `eps' > 1e-25){	
 		matrix beta_initial = beta_new
 		* calcul de constante
 		tempvar temp1
