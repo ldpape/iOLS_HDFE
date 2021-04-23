@@ -24,7 +24,7 @@
 
 {p 8 15 2} {cmd:iOLS_HDFE}
 {depvar} [{indepvars}][{absorb}]
-{ifin} {it:{weight}} {cmd:,} [{help iOLS_HDFE##options:options}] {p_end}
+{ifin} {it:{weight}} {cmd:,}  {cmd:absorb(varlist)} [{help iOLS_HDFE##options:options}] {p_end}
 
 {marker opt_summary}{...}
 {synoptset 22 tabbed}{...}
