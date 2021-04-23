@@ -97,7 +97,7 @@ program define iOLS_HDFE, eclass
 	quietly	rename `var' TEMP_`var'
 	quietly	rename M0_`var' `var'
 	}	
-	quietly	reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'   
+	quietly	reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'   noconstant
 	foreach var in `indepvar'{      // rename variables back
 	quietly	rename `var' M0_`var'
 	quietly	rename TEMP_`var' `var'
@@ -115,11 +115,11 @@ program define iOLS_HDFE, eclass
 	scalar  `nobs' = e(N)
 	tempvar ui
     gen `ui' = `depvar'*exp(- xb_hat - `phi_hat')
-	tempvar cste
-	gen `cste' = 1
+	*tempvar cste
+	*gen `cste' = 1
 	tempvar ui_bis
 	quietly gen `ui_bis' = 1 - `delta'/(`delta' + `ui')
-	local var_list M0_*    `cste'
+	local var_list M0_*  //  `cste'
 	mata : X=.
 	mata : IW=.
 	mata : st_view(X,.,"`var_list'")
