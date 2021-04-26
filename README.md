@@ -7,3 +7,5 @@ To install this code into Stata, run the following (requires at least Stata 14) 
 
 >net install iOLS_HDFE, from("https://raw.githubusercontent.com/ldpape/iOLS_HDFE/master/")
 
+You will need to have the following packages installed using:
+>ssc install reghdfe
