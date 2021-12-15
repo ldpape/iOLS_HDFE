@@ -48,7 +48,7 @@ program define iOLS_HDFE, eclass
 	quietly predict xb_hat,xb
 			*** ItÃ©rations iOLS
 	_dots 0
-	while (`k' < 1000 & `eps' > 1e-25){	
+	while (`k' < 1000 & `eps' > 1e-4){	
 		matrix beta_initial = beta_new
 		* calcul de constante
 		tempvar temp1
@@ -103,7 +103,7 @@ program define iOLS_HDFE, eclass
 	quietly	rename TEMP_`var' `var'
 	}
 	preserve
-	keep if e(sample)	
+	quietly keep if e(sample)	
 	* matrice de beta
 	matrix beta_final = e(b)
 	* Calcul de Sigma_0, de I-W et de Sigma_tild
