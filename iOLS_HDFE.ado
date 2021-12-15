@@ -1,3 +1,6 @@
+* 15/12/2021 : corrected "cross" in S.E. inversion to increase speed
+* 15/12/2021 : corrected iteration logical specification
+
 program define iOLS_HDFE, eclass 
 	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(varlist) Robust CLuster(varlist numeric)]
 	marksample touse
@@ -48,7 +51,7 @@ program define iOLS_HDFE, eclass
 	quietly predict xb_hat,xb
 			*** ItÃ©rations iOLS
 	_dots 0
-	while (`k' < 1000 & `eps' > 1e-4){	
+	while ( (`k' < 1000) & (`eps' > 1e-4)){	
 		matrix beta_initial = beta_new
 		* calcul de constante
 		tempvar temp1
@@ -127,7 +130,9 @@ program define iOLS_HDFE, eclass
 	mata : IW = diag(IW)
 	mata : Sigma_hat = st_matrix("Sigma")
 	mata : Sigma_0 = (X'*X)*Sigma_hat*(X'*X)
-	mata : invXpIWX = invsym(X'*IW*X)
+	mata : M = cross(X, IW, X)
+	mata : invXpIWX = invsym(M) 
+	*mata : invXpIWX = invsym(X'*IW*X)
 	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
     mata : st_matrix("Sigma_tild", Sigma_tild)
 	matrix Sigma_tild = Sigma_tild*((`e(df_r)')/(`N_DF')) // adjust DOF
