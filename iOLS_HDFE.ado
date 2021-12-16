@@ -1,8 +1,9 @@
 * 15/12/2021 : corrected "cross" in S.E. inversion to increase speed. Note: this required deleting the diagonalization step.
 * 15/12/2021 : corrected iteration logical specification
+* 16/12/2021 : corrected absorb from varlist to string, as in ppmlhdfe
 
 program define iOLS_HDFE, eclass 
-	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(varlist) Robust CLuster(varlist numeric)]
+	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(string) Robust CLuster(varlist numeric)]
 	marksample touse
 	if  "`robust'" !="" {
 		local opt1  = "`robust' "
