@@ -96,8 +96,8 @@ program define iOLS_HDFE, eclass
 		_dots `k' 0	
 	}
 ** save fixed effects and xb_hat (includes fe) to use in future testing procedure.
-	cap drop _iOLS_FE = fe
-	cap drop _iOLS_xb_hat = xb_hat
+	cap drop _iOLS_FE 
+	cap drop _iOLS_xb_hat 
 	quietly gen _iOLS_FE = fe
 	quietly gen _iOLS_xb_hat = xb_hat 
  *** Calcul de la matrice de variance-covariance
