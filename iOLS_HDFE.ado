@@ -95,6 +95,11 @@ program define iOLS_HDFE, eclass
 		local k = `k'+1
 		_dots `k' 0	
 	}
+** save fixed effects and xb_hat (includes fe) to use in future testing procedure.
+	cap drop _iOLS_FE = fe
+	cap drop _iOLS_xb_hat = xb_hat
+	quietly gen _iOLS_FE = fe
+	quietly gen _iOLS_xb_hat = xb_hat 
  *** Calcul de la matrice de variance-covariance
  	foreach var in `indepvar' {     // rename variables for last ols
 	quietly	rename `var' TEMP_`var'
