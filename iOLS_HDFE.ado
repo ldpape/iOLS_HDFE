@@ -1,4 +1,4 @@
-* 15/12/2021 : corrected "cross" in S.E. inversion to increase speed
+* 15/12/2021 : corrected "cross" in S.E. inversion to increase speed. Note: this required deleting the diagonalization step.
 * 15/12/2021 : corrected iteration logical specification
 
 program define iOLS_HDFE, eclass 
@@ -127,7 +127,7 @@ program define iOLS_HDFE, eclass
 	mata : IW=.
 	mata : st_view(X,.,"`var_list'")
 	mata : st_view(IW,.,"`ui_bis'")
-	mata : IW = diag(IW)
+	*mata : IW = diag(IW) // not necessary with "cross" below.
 	mata : Sigma_hat = st_matrix("Sigma")
 	mata : Sigma_0 = (X'*X)*Sigma_hat*(X'*X)
 	mata : M = cross(X, IW, X)
