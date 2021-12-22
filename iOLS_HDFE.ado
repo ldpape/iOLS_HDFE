@@ -99,9 +99,7 @@ cap _crcslbl Y0_ `depvar'
 	mata : Sigma_hat = st_matrix("Sigma")
 	mata : Sigma_0 = cross(PX,PX)*Sigma_hat*cross(PX,PX) // recover original HAC 
 	mata : invXpIWX = invsym(cross(PX, ui, PX)) 
-	mata : invXpIWX
 	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
-	mata : Sigma_tild
     mata: st_matrix("Sigma_tild", Sigma_tild) // used in practice
    	matrix Sigma_tild = Sigma_tild*((`e(df_r)')/(`N_DF')) // adjust DOF	
 	*** Stocker les resultats dans une matrice
@@ -118,5 +116,5 @@ ereturn scalar niter =  `k'
 ereturn local cmd "iOLS_HDFE"
 ereturn local vcetype `option'
 ereturn display
-	
+
 end
