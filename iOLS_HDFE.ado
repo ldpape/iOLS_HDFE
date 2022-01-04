@@ -154,6 +154,7 @@ ereturn scalar eps =   `eps'
 ereturn scalar niter =  `k'
 ereturn local cmd "iOLS_HDFE"
 ereturn local vcetype `option'
+di in gr _col(55) "Number of obs = " in ye %8.0f e(N)
 ereturn display
 
 end
