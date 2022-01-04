@@ -3,6 +3,8 @@
 * 16/12/2021 : corrected absorb from varlist to string, as in ppmlhdfe
 * 22/12/2021 : coded with matrix multiplication instead of pre-canned program
 * 22/12/2021 : added convergence control (limit and maximum)
+* 04/01/2022 : added constant + checks for convergence
+cap program drop iOLS_HDFE
 program define iOLS_HDFE, eclass 
 	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(string) LIMit(real 0.00001) MAXimum(real 1000) Robust CLuster(varlist numeric)]
 	marksample touse
@@ -49,8 +51,12 @@ program define iOLS_HDFE, eclass
 	* prepare  future inversions 
 	mata : invPXPX = invsym(cross(PX,PX))
 	mata : beta_initial = invPXPX*cross(PX,Py_tilde)
-	local k = 0
+	mata : beta_t_1 = beta_initial // needed to initialize
+	mata : beta_t_2 = beta_initial // needed to initialize
+	mata : q_hat_m0 = 0
+	local k = 1
 	local eps = 1000	
+	mata: q_hat = J(`maximum', 1, .)
 	*** Iterations iOLS
 	_dots 0
 	while ((`k' < `maximum') & (`eps' > `limit' )) {
@@ -59,7 +65,8 @@ program define iOLS_HDFE, eclass
 	mata: fe = y_tilde - Py_tilde + xb_hat_M - xb_hat_N
 	mata: xb_hat = xb_hat_N + fe
 	* Update d'un nouveau y_tild et regression avec le nouvel y_tild
-	mata: y_tilde = log(y + `delta'*exp(xb_hat)) :-mean(log(y + `delta'*exp(xb_hat))- xb_hat)
+	mata: alpha = log(mean(y:*exp(-xb_hat)))
+	mata: y_tilde = log(y + `delta'*exp(xb_hat :+ alpha )) :-mean(log(y + `delta'*exp(xb_hat :+ alpha)) -xb_hat :- alpha  )
 	* Update d'un nouveau y_tild et regression avec le nouvel y_tild
 	cap drop `y_tild' 
 	quietly mata: st_addvar("double", "`y_tild'")
@@ -72,6 +79,38 @@ program define iOLS_HDFE, eclass
 	mata: criteria = mean(abs(beta_initial - beta_new):^(2))
 	mata: st_numscalar("eps", criteria)
 	mata: st_local("eps", strofreal(criteria))
+		* safeguard for convergence.
+	if `k'==`maximum'{
+		  di "There has been no convergence so far: increase the number of iterations."  
+	}
+	if `k'>4{
+	mata: q_hat[`k',1] = mean(log( abs(beta_new-beta_initial):/abs(beta_initial-beta_t_2)):/log(abs(beta_initial-beta_t_2):/abs(beta_t_2-beta_t_3)))	
+	mata: check_3 = abs(mean(q_hat)-1)
+		if mod(`k'-4,50)==0{
+    mata: q_hat_m =  mm_median(q_hat[((`k'-49)..`k'),.] ,1)
+	mata: check_1 = abs(q_hat_m - q_hat_m0)
+	mata: check_2 = abs(q_hat_m-1)
+	mata: st_numscalar("check_1", check_1)
+	mata: st_local("check_1", strofreal(check_1))
+	mata: st_numscalar("check_2", check_2)
+	mata: st_local("check_2", strofreal(check_2))
+	mata: st_numscalar("check_3", check_3)
+	mata: st_local("check_3", strofreal(check_3))
+	mata: q_hat_m0 = q_hat_m
+		if ((`check_1'<1e-4)&(`check_2'>1e-2)) {
+di "delta is too small to achieve convergence -- update to larger value"
+	local k = `maximum'
+		}
+		if ((`check_3'>0.5) & (`k'>500)) {
+	local k = `maximum'
+di "q_hat too far from 1"
+		}
+					  }
+	}
+	if `k'>2 { // keep in memory the previous beta_hat for q_hat 
+	mata:   beta_t_3 = beta_t_2
+	mata:   beta_t_2 = beta_initial
+	}
 	mata: beta_initial = beta_new
 	local k = `k'+1
 	_dots `k' 0
