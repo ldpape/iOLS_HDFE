@@ -136,17 +136,17 @@ cap _crcslbl Y0_ `depvar'
 	matrix beta_final = e(b) // 	mata: st_matrix("beta_final", beta_new)
 	matrix Sigma = e(V)
 	mata : Sigma_hat = st_matrix("Sigma")
-	mata : Sigma_0 = cross(PX,PX)*Sigma_hat*cross(PX,PX) // recover original HAC 
-	mata : invXpIWX = invsym(cross(PX, ui, PX)) 
+	mata : Sigma_0 = cross(PX,PX:/rows(PX))*Sigma_hat*cross(PX,PX:/rows(PX)) // recover original HAC 
+	mata : invXpIWX = invsym(cross(PX:/rows(PX), ui, PX)) 
 	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
     mata: st_matrix("Sigma_tild", Sigma_tild) // used in practice
-   	matrix Sigma_tild = Sigma_tild*((`e(df_r)')/(`N_DF')) // adjust DOF	
+//   	matrix Sigma_tild = Sigma_tild*((`e(df_r)')/(`N_DF')) // adjust DOF	
 	*** Stocker les resultats dans une matrice
 	local names : colnames e(b)
 	local nbvar : word count `names'
 	mat rownames Sigma_tild = `names' 
     mat colnames Sigma_tild = `names' 
-   ereturn post beta_final Sigma_tild , obs(`=r(N)') depname(`depvar') esample(`touse')  dof(`N_DF')
+   ereturn post beta_final Sigma_tild , obs(`=e(N)') depname(`depvar') esample(`touse')  dof(`N_DF')
    restore 
    
 ereturn scalar delta = `delta'
