@@ -180,7 +180,8 @@ cap _crcslbl Y0_ `depvar'
 	* Calcul du "bon" residu
 	predict xb_hat, xb 
 	gen ui = `depvar'*exp(-xb_hat)
-	replace ui = ui/(`delta'+ ui)	
+	replace ui = ui/(`delta'+ ui)
+	mata : ui= st_data(.,"ui")
 *** rename variables
 	foreach var in `indepvar' {      // rename variables back
 	quietly	rename `var' M0_`var'
