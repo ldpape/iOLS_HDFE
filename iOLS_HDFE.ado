@@ -6,7 +6,9 @@
 * 04/01/2022 : added constant + checks for convergence
 cap program drop iOLS_HDFE
 program define iOLS_HDFE, eclass 
-	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(string) LIMit(real 0.00001) MAXimum(real 1000) Robust CLuster(varlist numeric)]
+syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMit(real 0.00001) ABSorb(string) MAXimum(real 1000) Robust CLuster(string)]        
+
+//	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(string) LIMit(real 0.00001) MAXimum(real 1000) Robust CLuster(varlist numeric)]
 	marksample touse
 	preserve
 	quietly keep if `touse'
@@ -20,7 +22,7 @@ program define iOLS_HDFE, eclass
 		local opt3 = "absorb(`absorb') "
 	}
 	local option = "`opt1'`opt2'"	
-	local list_var `anything'
+	local list_var `varlist'
 	* get depvar and indepvar
 	gettoken depvar list_var : list_var
 	//gettoken indepvar list_var : list_var, p("(")
