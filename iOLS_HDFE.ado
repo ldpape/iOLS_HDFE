@@ -41,7 +41,7 @@ cap drop `group'
  tempvar logy                            																						// Creates regressand 
  quietly: gen `logy'=log(`depvar') if (`touse')&(`depvar'>0)
  quietly: reghdfe `logy' `_rhs'    if (`touse')&(`depvar'>0)	, absorb(`absorb')
- quietly: replace `touse' = 0 if (e(sample)==0) & (`touse')&(`depvar'>0)
+// quietly: replace `touse' = 0 if (e(sample)==0) & (`touse')&(`depvar'>0)
 // Initialize observations selector
  local _drop ""                                                                                                // List of regressors to exclude
  local indepvar ""     
