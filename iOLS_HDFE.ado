@@ -26,19 +26,22 @@ program define iOLS_HDFE, eclass
 	//gettoken indepvar list_var : list_var, p("(")
 	gettoken _rhs list_var : list_var, p("(")
 *** check seperation : code from "ppml"
+ tempvar zeros                            																						// Creates regressand for first step
+ quietly: gen `zeros'=1 	
+foreach var of varlist `absorb'{
 tempvar group 
-egen `group' = group(`absorb')
+egen `group' = group(`var')
 tempvar max_group 
 bys `group' : egen `max_group' = max(`depvar') if `touse'
 tempvar min_group 
 bys `group' : egen `min_group' = min(`depvar') if `touse'
+quietly: replace `zeros' = 0 if `min_group' == 0  & `max_group' == 0 & `touse'
+cap drop `group'
+}
  tempvar logy                            																						// Creates regressand 
  quietly: gen `logy'=log(`depvar') if (`touse')&(`depvar'>0)
  quietly: reghdfe `logy' `_rhs'    if (`touse')&(`depvar'>0)	, absorb(`absorb')
  quietly: replace `touse' = 0 if (e(sample)==0) & (`touse')&(`depvar'>0)
- tempvar zeros                            																						// Creates regressand for first step
- quietly: gen `zeros'=1 	
- quietly: replace `zeros' = 0 if `min_group' == 0  & `max_group' == 0 & `touse'
 // Initialize observations selector
  local _drop ""                                                                                                // List of regressors to exclude
  local indepvar ""     
