@@ -169,10 +169,7 @@ di "q_hat too far from 1"
 	_dots `k' 0
 	}
 	*** Calcul de la bonne matrice de variance-covariance
-	* Calcul du "bon" residu
-	mata: ui = y:*exp(-xb_hat)
-	mata: ui = ui:/(`delta' :+ ui)	
-	
+
  *** Calcul de la matrice de variance-covariance
  	foreach var in `indepvar' {     // rename variables for last ols
 	quietly	rename `var' TEMP_`var'
@@ -180,6 +177,11 @@ di "q_hat too far from 1"
 	}	
 cap _crcslbl Y0_ `depvar'
 	quietly reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'  noconstant
+	* Calcul du "bon" residu
+	predict xb_hat, xb 
+	gen ui = y*exp(-xb_hat)
+	replace ui = ui/(`delta'+ ui)	
+*** rename variables
 	foreach var in `indepvar' {      // rename variables back
 	quietly	rename `var' M0_`var'
 	quietly	rename TEMP_`var' `var'
