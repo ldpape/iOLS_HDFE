@@ -179,7 +179,7 @@ cap _crcslbl Y0_ `depvar'
 	quietly reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'  noconstant
 	* Calcul du "bon" residu
 	predict xb_hat, xb 
-	gen ui = y*exp(-xb_hat)
+	gen ui = `depvar'*exp(-xb_hat)
 	replace ui = ui/(`delta'+ ui)	
 *** rename variables
 	foreach var in `indepvar' {      // rename variables back
