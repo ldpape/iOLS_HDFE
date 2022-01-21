@@ -23,8 +23,57 @@ program define iOLS_HDFE, eclass
 	local list_var `anything'
 	* get depvar and indepvar
 	gettoken depvar list_var : list_var
-	gettoken indepvar list_var : list_var, p("(")
-	*** Initialisation de la boucle
+	//gettoken indepvar list_var : list_var, p("(")
+	gettoken _rhs list_var : list_var, p("(")
+*** check seperation : code from "ppml"
+tempvar group 
+egen `group' = group(`absorb')
+tempvar max_group 
+bys `group' : egen `max_group' = max(`depvar') if `touse'
+tempvar min_group 
+bys `group' : egen `min_group' = min(`depvar') if `touse'
+ tempvar logy                            																						// Creates regressand 
+ quietly: gen `logy'=log(`depvar') if (`touse')&(`depvar'>0)
+ quietly: reghdfe `logy' `_rhs'    if (`touse')&(`depvar'>0)	, absorb(`absorb')
+ quietly: replace `touse' = 0 if (e(sample)==0) & (`touse')&(`depvar'>0)
+ tempvar zeros                            																						// Creates regressand for first step
+ quietly: gen `zeros'=1 	
+ quietly: replace `zeros' = 0 if `min_group' == 0  & `max_group' == 0 & `touse'
+// Initialize observations selector
+ local _drop ""                                                                                                // List of regressors to exclude
+ local indepvar ""     
+    foreach x of varlist `_rhs' {   
+      if (_se[`x']==0) {                                                                                       // Try to include regressors dropped in the
+          qui summarize `x' if (`depvar'>0)&(`touse'), meanonly
+          local _mean=r(mean)
+          qui summarize `x' if (`depvar'==0)&(`touse')
+          if (r(min)<`_mean')&(r(max)>`_mean'){                                            // Include regressor if conditions met and
+              local indepvar "`indepvar' `x'"                                                                        // strict is off 
+          }
+          else{
+              qui su `x' if `touse', d                                                                         // Otherwise, drop regressor
+              local _mad=r(p50)
+              qui inspect  `x'  if `touse'                                                                         
+              qui replace `zeros'=0 if (`x'!=`_mad')&(r(N_unique)==2)&(`touse')                                // Mark observations to drop
+              local _drop "`_drop' `x'"
+          }
+      }                                                                                                        // End of LOOP 1.1 
+      if _se[`x']>0 {                                                                                          // Include safe regressors: LOOP 1.2
+      local indepvar "`indepvar' `x'" 
+      }                                                                                                        // End LOOP 1.2
+    }   
+ qui su `touse' if `touse', mean                                                                               // Summarize touse to obtain N
+ local _enne=r(sum)                                                                                            // Save N
+ qui replace `touse'=0 if (`zeros'==0)&("`keep'"=="")&(`depvar'==0)&(`touse')                                  // Drop observations with perfect fit
+ di                                                                                                              // if keep is off
+ local k_excluded : word count `_drop'                                                                      // Number of variables causing perfect fit
+ di in green "Number of non-absorbed regressors excluded to ensure that the estimates exist: `k_excluded'" 
+ if ("`_drop'" != "") di "Excluded regressors: `_drop'"                                                        // List dropped variables if any
+ qui su `touse' if `touse', mean
+ local _enne = `_enne' - r(sum)                                                                                // Number of observations dropped
+ di in green "Number of observations excluded: `_enne'" 
+ local _enne =  r(sum)
+quietly keep if `touse'	
 	** drop collinear variables
     _rmcoll `indepvar', forcedrop 
 	local var_list `r(varlist)'
@@ -32,12 +81,14 @@ program define iOLS_HDFE, eclass
 	cap drop M0_*
 	cap drop Y0_*
 	cap drop xb_hat*
-	quietly hdfe `r(varlist)' [`weight'] , absorb(`absorb') generate(M0_)
-	tempname DF_ADAPT
-	scalar `DF_ADAPT' = e(df_a) //- e(N_hdfe)
+	tempvar new_sample
+	quietly hdfe `r(varlist)' [`weight'] , absorb(`absorb') generate(M0_) sample(`new_sample') 
+quietly:	keep if `new_sample'
 	tempvar y_tild  
 	quietly gen `y_tild' = log(`depvar' + 1)
-	quietly	hdfe `y_tild' [`weight'] , absorb(`absorb') generate(Y0_) 
+	cap drop `new_sample'
+	quietly	hdfe `y_tild' , absorb(`absorb') generate(Y0_) sample(`new_sample') 
+quietly:	keep if `new_sample'
 	mata : X=.
 	mata : PX=.
 	mata : y_tilde =.
@@ -67,7 +118,6 @@ program define iOLS_HDFE, eclass
 	* Update d'un nouveau y_tild et regression avec le nouvel y_tild
 	mata: alpha = log(mean(y:*exp(-xb_hat)))
 	mata: y_tilde = log(y + `delta'*exp(xb_hat :+ alpha )) :-mean(log(y + `delta'*exp(xb_hat :+ alpha)) -xb_hat :- alpha  )
-	* Update d'un nouveau y_tild et regression avec le nouvel y_tild
 	cap drop `y_tild' 
 	quietly mata: st_addvar("double", "`y_tild'")
 	mata: st_store(.,"`y_tild'",y_tilde)
@@ -127,7 +177,6 @@ di "q_hat too far from 1"
 	}	
 cap _crcslbl Y0_ `depvar'
 	quietly reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'  noconstant
-	local N_DF = e(df_r) -`DF_ADAPT' 
 	foreach var in `indepvar' {      // rename variables back
 	quietly	rename `var' M0_`var'
 	quietly	rename TEMP_`var' `var'
@@ -139,14 +188,14 @@ cap _crcslbl Y0_ `depvar'
 	mata : Sigma_0 = cross(PX,PX:/rows(PX))*Sigma_hat*cross(PX,PX:/rows(PX)) // recover original HAC 
 	mata : invXpIWX = invsym(cross(PX:/rows(PX), ui, PX)) 
 	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
+	mata: Sigma_tild = (Sigma_tild+Sigma_tild'):/2
     mata: st_matrix("Sigma_tild", Sigma_tild) // used in practice
-//   	matrix Sigma_tild = Sigma_tild*((`e(df_r)')/(`N_DF')) // adjust DOF	
 	*** Stocker les resultats dans une matrice
 	local names : colnames e(b)
 	local nbvar : word count `names'
 	mat rownames Sigma_tild = `names' 
     mat colnames Sigma_tild = `names' 
-   ereturn post beta_final Sigma_tild , obs(`=e(N)') depname(`depvar') esample(`touse')  dof(`N_DF')
+   ereturn post beta_final Sigma_tild , obs(`=e(N)') depname(`depvar') esample(`touse')  dof(`=e(df_r)')
    restore 
    
 ereturn scalar delta = `delta'
