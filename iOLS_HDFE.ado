@@ -10,6 +10,8 @@ syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMi
 
 //	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(string) LIMit(real 0.00001) MAXimum(real 1000) Robust CLuster(varlist numeric)]
 	marksample touse
+	markout `touse'  `cluster', s     
+
 	preserve
 	quietly keep if `touse'
 	if  "`robust'" !="" {
