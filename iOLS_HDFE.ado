@@ -32,7 +32,7 @@ syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMi
  quietly: gen `zeros'=1 	
 foreach var of varlist `absorb'{
 tempvar group 
-egen `group' = group(`var')
+quietly egen `group' = group(`var')
 tempvar max_group 
 bys `group' : egen `max_group' = max(`depvar') if `touse'
 tempvar min_group 
@@ -180,9 +180,9 @@ di "q_hat too far from 1"
 cap _crcslbl Y0_ `depvar'
 	quietly reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'  noconstant
 	* Calcul du "bon" residu
-	predict xb_hat, xb 
-	gen ui = `depvar'*exp(-xb_hat)
-	replace ui = ui/(`delta'+ ui)
+	quietly predict xb_hat, xb 
+	quietly gen ui = `depvar'*exp(-xb_hat)
+	quietly replace ui = ui/(`delta'+ ui)
 	mata : ui= st_data(.,"ui")
 *** rename variables
 	foreach var in `indepvar' {      // rename variables back
