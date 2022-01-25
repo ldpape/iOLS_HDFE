@@ -3,9 +3,9 @@
 * 16/12/2021 : corrected absorb from varlist to string, as in ppmlhdfe
 * 22/12/2021 : coded with matrix multiplication instead of pre-canned program
 * 22/12/2021 : added convergence control (limit and maximum)
-* 04/01/2022 : added constant + checks for convergence 
-cap program drop iOLS_HDFE
-program define iOLS_HDFE, eclass 
+* 04/01/2022 : added constant + checks for convergence
+cap program drop iOLS_HDFE2
+program define iOLS_HDFE2, eclass 
 syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMit(real 1e-8)  MAXimum(real 10000) ABSorb(string)  Robust CLuster(string)]        
 
 //	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(string) LIMit(real 0.00001) MAXimum(real 1000) Robust CLuster(varlist numeric)]
@@ -15,7 +15,7 @@ syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMi
 	preserve
 	quietly keep if `touse'
 	if  "`robust'" !="" {
-		local opt1  = "vce(`robust')"
+		local opt1  = "`robust' "
 	}
 	if "`cluster'" !="" {
 		local opt2 = "vce(cluster `cluster') "
@@ -85,7 +85,7 @@ cap drop `group'
  local _enne =  r(sum)
 quietly keep if `touse'	
 	** drop collinear variables
-		tempvar cste
+	tempvar cste
 	gen `cste' = 1
     _rmcoll `indepvar' `cste', forcedrop 
 	local var_list `r(varlist)'
@@ -106,8 +106,8 @@ quietly:	keep if `new_sample'
 	mata : y_tilde =.
 	mata : Py_tilde =.
 	mata : y =.
-	mata : st_view(X,.,"`var_list' `cste'")
-	mata : st_view(PX,.,"M0_* `cste'")
+	mata : st_view(X,.,"`var_list' ")
+	mata : st_view(PX,.,"M0_*")
 	mata : st_view(y_tilde,.,"`y_tild'")
 	mata : st_view(Py_tilde,.,"Y0_")
 	mata : st_view(y,.,"`depvar'")	
@@ -178,27 +178,37 @@ di "q_hat too far from 1"
 	_dots `k' 0
 	}
 	*** Calcul de la bonne matrice de variance-covariance
-
- *** Calcul de la matrice de variance-covariance
+ 	mata: xb_hat_M = PX*beta_initial 
+	mata: xb_hat_N = X*beta_initial
+	mata: fe = y_tilde - Py_tilde + xb_hat_M - xb_hat_N
+	mata: xb_hat = xb_hat_N + fe
+	* Update d'un nouveau y_tild et regression avec le nouvel y_tild
+	mata: alpha = log(mean(y:*exp(-xb_hat)))
+	mata: y_tilde = log(y + `delta'*exp(xb_hat :+ alpha )) :-mean(log(y + `delta'*exp(xb_hat :+ alpha)) -xb_hat :- alpha  )
+	mata: y_final = y_tilde - fe 
 	cap drop `y_tild' 
 	quietly mata: st_addvar("double", "`y_tild'")
-	mata: st_store(.,"`y_tild'",y_tilde)
-cap _crcslbl `y_tild' `depvar'
-	quietly: reghdfe `y_tild' `indepvar' if `touse' [`weight'`exp'], `option'  absorb(`absorb') resid 
+	mata: st_store(.,"`y_tild'",y_final)
+	reg `y_tild' `var_list' if `touse' [`weight'`exp'], `option' 
 	* Calcul du "bon" residu
-	quietly predict xb_hat,  xbd  
-	quietly gen ui = `depvar'*exp(-xb_hat)
-	quietly gen weight = ui/(`delta'+ ui)
-	mata : weight= st_data(.,"weight")
-* Calcul de Sigma_0, de I-W, et de Sigma_tild
-	matrix beta_final = e(b) // 	mata: st_matrix("beta_final", beta_new)
+	cap drop xb_hat
+	quietly predict xb_hat, xb
+	cap drop `y_tild' 
+	quietly mata: st_addvar("double", "`y_tild'")
+	mata: st_store(.,"`y_tild'",fe)
+	cap drop ui
+	quietly gen ui = `depvar'*exp(-xb_hat-`y_tild')
+	mata : ui= st_data(.,"ui")
+	mata: weight = ui:/(ui :+ `delta')
+	matrix beta_final = e(b)
 	matrix Sigma = e(V)
+		mata : st_view(X,.,"`var_list' `cste'")
 	mata : Sigma_hat = st_matrix("Sigma")
-	mata : Sigma_0 = (cross(X,X):/rows(X))*Sigma_hat*(cross(X,X):/rows(X)) // recover original HAC 
-	mata : invXpIWX = invsym(cross(X, weight, X):/rows(X)) 
+	mata : Sigma_0 = (cross(X,X):/rows(X))*Sigma_hat*(cross(X,X):/rows(X))
+	mata : invXpIWX = invsym(cross(X, weight, X):/rows(X))
 	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
-	mata: Sigma_tild = (Sigma_tild+Sigma_tild'):/2
-    mata: st_matrix("Sigma_tild", Sigma_tild) // used in practice
+	mata : Sigma_tild = (Sigma_tild+Sigma_tild'):/2 
+	 mata: st_matrix("Sigma_tild", Sigma_tild)
 	*** Stocker les resultats dans une matrice
 	local names : colnames e(b)
 	local nbvar : word count `names'
