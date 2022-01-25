@@ -3,7 +3,7 @@
 * 16/12/2021 : corrected absorb from varlist to string, as in ppmlhdfe
 * 22/12/2021 : coded with matrix multiplication instead of pre-canned program
 * 22/12/2021 : added convergence control (limit and maximum)
-* 04/01/2022 : added constant + checks for convergence
+* 04/01/2022 : added constant + checks for convergence 
 cap program drop iOLS_HDFE
 program define iOLS_HDFE, eclass 
 syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMit(real 1e-8)  MAXimum(real 10000) ABSorb(string)  Robust CLuster(string)]        
@@ -15,7 +15,7 @@ syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMi
 	preserve
 	quietly keep if `touse'
 	if  "`robust'" !="" {
-		local opt1  = "`robust' "
+		local opt1  = "vce(`robust')"
 	}
 	if "`cluster'" !="" {
 		local opt2 = "vce(cluster `cluster') "
@@ -85,7 +85,9 @@ cap drop `group'
  local _enne =  r(sum)
 quietly keep if `touse'	
 	** drop collinear variables
-    _rmcoll `indepvar', forcedrop 
+		tempvar cste
+	gen `cste' = 1
+    _rmcoll `indepvar' `cste', forcedrop 
 	local var_list `r(varlist)'
 		*** FWL Theorem Application
 	cap drop M0_*
@@ -104,8 +106,8 @@ quietly:	keep if `new_sample'
 	mata : y_tilde =.
 	mata : Py_tilde =.
 	mata : y =.
-	mata : st_view(X,.,"`var_list'")
-	mata : st_view(PX,.,"M0_*")
+	mata : st_view(X,.,"`var_list' `cste'")
+	mata : st_view(PX,.,"M0_* `cste'")
 	mata : st_view(y_tilde,.,"`y_tild'")
 	mata : st_view(Py_tilde,.,"Y0_")
 	mata : st_view(y,.,"`depvar'")	
@@ -178,22 +180,16 @@ di "q_hat too far from 1"
 	*** Calcul de la bonne matrice de variance-covariance
 
  *** Calcul de la matrice de variance-covariance
- 	foreach var in `indepvar' {     // rename variables for last ols
-	quietly	rename `var' TEMP_`var'
-	quietly	rename M0_`var' `var'
-	}	
-cap _crcslbl Y0_ `depvar'
-	quietly reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'  noconstant
+	cap drop `y_tild' 
+	quietly mata: st_addvar("double", "`y_tild'")
+	mata: st_store(.,"`y_tild'",y_tilde)
+cap _crcslbl `y_tild' `depvar'
+	quietly: reghdfe `y_tild' `indepvar' if `touse' [`weight'`exp'], `option'  absorb(`absorb') resid 
 	* Calcul du "bon" residu
-	quietly predict xb_hat, xb 
+	quietly predict xb_hat,  xbd  
 	quietly gen ui = `depvar'*exp(-xb_hat)
 	quietly gen weight = ui/(`delta'+ ui)
 	mata : weight= st_data(.,"weight")
-*** rename variables
-	foreach var in `indepvar' {      // rename variables back
-	quietly	rename `var' M0_`var'
-	quietly	rename TEMP_`var' `var'
-	}
 * Calcul de Sigma_0, de I-W, et de Sigma_tild
 	matrix beta_final = e(b) // 	mata: st_matrix("beta_final", beta_new)
 	matrix Sigma = e(V)
