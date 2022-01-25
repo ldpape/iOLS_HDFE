@@ -198,9 +198,9 @@ cap _crcslbl Y0_ `depvar'
 	matrix beta_final = e(b) // 	mata: st_matrix("beta_final", beta_new)
 	matrix Sigma = e(V)
 	mata : Sigma_hat = st_matrix("Sigma")
-	mata : Sigma_0 = cross(PX,PX:/rows(PX))*Sigma_hat*cross(PX,PX:/rows(PX)) // recover original HAC 
-	mata : invXpIWX = invsym(cross(PX:/rows(PX), weight, PX)) 
-	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
+	mata : Sigma_0 = (cross(PX,PX):/rows(PX))*Sigma_hat*(cross(PX,PX):/rows(PX)) // recover original HAC 
+	mata : invXpIWX = invsym(cross(PX, weight, PX):/rows(X)) 
+	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX:/rows(X)	
 	mata: Sigma_tild = (Sigma_tild+Sigma_tild'):/2
     mata: st_matrix("Sigma_tild", Sigma_tild) // used in practice
 	*** Stocker les resultats dans une matrice
