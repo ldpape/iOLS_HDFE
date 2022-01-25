@@ -187,8 +187,8 @@ cap _crcslbl Y0_ `depvar'
 	* Calcul du "bon" residu
 	quietly predict xb_hat, xb 
 	quietly gen ui = `depvar'*exp(-xb_hat)
-	quietly replace ui = ui/(`delta'+ ui)
-	mata : ui= st_data(.,"ui")
+	quietly gen weight = ui/(`delta'+ ui)
+	mata : weight= st_data(.,"weight")
 *** rename variables
 	foreach var in `indepvar' {      // rename variables back
 	quietly	rename `var' M0_`var'
@@ -199,7 +199,7 @@ cap _crcslbl Y0_ `depvar'
 	matrix Sigma = e(V)
 	mata : Sigma_hat = st_matrix("Sigma")
 	mata : Sigma_0 = cross(PX,PX:/rows(PX))*Sigma_hat*cross(PX,PX:/rows(PX)) // recover original HAC 
-	mata : invXpIWX = invsym(cross(PX:/rows(PX), ui, PX)) 
+	mata : invXpIWX = invsym(cross(PX:/rows(PX), weight, PX)) 
 	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
 	mata: Sigma_tild = (Sigma_tild+Sigma_tild'):/2
     mata: st_matrix("Sigma_tild", Sigma_tild) // used in practice
