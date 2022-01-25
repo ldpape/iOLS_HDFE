@@ -4,8 +4,8 @@
 * 22/12/2021 : coded with matrix multiplication instead of pre-canned program
 * 22/12/2021 : added convergence control (limit and maximum)
 * 04/01/2022 : added constant + checks for convergence
-cap program drop iOLS_HDFE2
-program define iOLS_HDFE2, eclass 
+cap program drop iOLS_HDFE
+program define iOLS_HDFE, eclass 
 syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMit(real 1e-8)  MAXimum(real 10000) ABSorb(string)  Robust CLuster(string)]        
 
 //	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(string) LIMit(real 0.00001) MAXimum(real 1000) Robust CLuster(varlist numeric)]
