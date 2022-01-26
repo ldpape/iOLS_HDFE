@@ -85,9 +85,7 @@ cap drop `group'
  local _enne =  r(sum)
 quietly keep if `touse'	
 	** drop collinear variables
-	tempvar cste
-	gen `cste' = 1
-    _rmcoll `indepvar' `cste', forcedrop 
+    _rmcoll `indepvar', forcedrop 
 	local var_list `r(varlist)'
 		*** FWL Theorem Application
 	cap drop M0_*
@@ -106,7 +104,7 @@ quietly:	keep if `new_sample'
 	mata : y_tilde =.
 	mata : Py_tilde =.
 	mata : y =.
-	mata : st_view(X,.,"`var_list' ")
+	mata : st_view(X,.,"`var_list'")
 	mata : st_view(PX,.,"M0_*")
 	mata : st_view(y_tilde,.,"`y_tild'")
 	mata : st_view(Py_tilde,.,"Y0_")
@@ -178,37 +176,33 @@ di "q_hat too far from 1"
 	_dots `k' 0
 	}
 	*** Calcul de la bonne matrice de variance-covariance
- 	mata: xb_hat_M = PX*beta_initial 
-	mata: xb_hat_N = X*beta_initial
-	mata: fe = y_tilde - Py_tilde + xb_hat_M - xb_hat_N
-	mata: xb_hat = xb_hat_N + fe
-	* Update d'un nouveau y_tild et regression avec le nouvel y_tild
-	mata: alpha = log(mean(y:*exp(-xb_hat)))
-	mata: y_tilde = log(y + `delta'*exp(xb_hat :+ alpha )) :-mean(log(y + `delta'*exp(xb_hat :+ alpha)) -xb_hat :- alpha  )
-	mata: y_final = y_tilde - fe 
-	cap drop `y_tild' 
-	quietly mata: st_addvar("double", "`y_tild'")
-	mata: st_store(.,"`y_tild'",y_final)
-	reg `y_tild' `var_list' if `touse' [`weight'`exp'], `option' 
+
+ *** Calcul de la matrice de variance-covariance
+ 	foreach var in `indepvar' {     // rename variables for last ols
+	quietly	rename `var' TEMP_`var'
+	quietly	rename M0_`var' `var'
+	}	
+cap _crcslbl Y0_ `depvar'
+	quietly reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'  noconstant
 	* Calcul du "bon" residu
-	cap drop xb_hat
-	quietly predict xb_hat, xb
-	cap drop `y_tild' 
-	quietly mata: st_addvar("double", "`y_tild'")
-	mata: st_store(.,"`y_tild'",fe)
-	cap drop ui
-	quietly gen ui = `depvar'*exp(-xb_hat-`y_tild')
-	mata : ui= st_data(.,"ui")
-	mata: weight = ui:/(ui :+ `delta')
-	matrix beta_final = e(b)
+	quietly predict xb_hat, xb 
+	quietly gen ui = `depvar'*exp(-xb_hat)
+	quietly gen weight = ui/(`delta'+ ui)
+	mata : weight= st_data(.,"weight")
+*** rename variables
+	foreach var in `indepvar' {      // rename variables back
+	quietly	rename `var' M0_`var'
+	quietly	rename TEMP_`var' `var'
+	}
+* Calcul de Sigma_0, de I-W, et de Sigma_tild
+	matrix beta_final = e(b) // 	mata: st_matrix("beta_final", beta_new)
 	matrix Sigma = e(V)
-		mata : st_view(X,.,"`var_list' `cste'")
 	mata : Sigma_hat = st_matrix("Sigma")
-	mata : Sigma_0 = (cross(X,X):/rows(X))*Sigma_hat*(cross(X,X):/rows(X))
-	mata : invXpIWX = invsym(cross(X, weight, X):/rows(X))
+	mata : Sigma_0 = (cross(PX,PX):/rows(PX))*Sigma_hat*(cross(PX,PX):/rows(PX)) // recover original HAC 
+	mata : invXpIWX = invsym(cross(PX, weight, PX):/rows(PX)) 
 	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
-	mata : Sigma_tild = (Sigma_tild+Sigma_tild'):/2 
-	 mata: st_matrix("Sigma_tild", Sigma_tild)
+	mata: Sigma_tild = (Sigma_tild+Sigma_tild'):/2
+    mata: st_matrix("Sigma_tild", Sigma_tild) // used in practice
 	*** Stocker les resultats dans une matrice
 	local names : colnames e(b)
 	local nbvar : word count `names'
