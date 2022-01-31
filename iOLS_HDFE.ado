@@ -47,7 +47,7 @@ cap drop `group'
 }
  tempvar logy                            																						// Creates regressand 
  quietly: gen `logy'=log(`depvar') if (`touse')&(`depvar'>0)
- quietly: reghdfe `logy' `_rhs'    if (`touse')&(`depvar'>0)	, absorb(`absorb')
+ quietly: reghdfe `logy' `_rhs'    if (`touse')&(`depvar'>0)	, absorb(`absorb')   nosample
 // quietly: replace `touse' = 0 if (e(sample)==0) & (`touse')&(`depvar'>0)
 // Initialize observations selector
  local _drop ""                                                                                                // List of regressors to exclude
@@ -85,17 +85,20 @@ cap drop `group'
  local _enne =  r(sum)
 quietly keep if `touse'	
 	** drop collinear variables
-    _rmcoll `indepvar', forcedrop 
+		tempvar cste
+	gen `cste' = 1
+    _rmcoll `indepvar' `cste' , forcedrop 
 	local var_list `r(varlist)'
 		*** FWL Theorem Application
 	cap drop M0_*
 	cap drop Y0_*
 	cap drop xb_hat*
 	tempvar new_sample
-	quietly hdfe `r(varlist)' [`weight'] , absorb(`absorb') generate(M0_) sample(`new_sample') 
+	quietly hdfe `var_list' [`weight'] , absorb(`absorb') generate(M0_) sample(`new_sample') 
+local df_a = e(df_a)
 quietly:	keep if `new_sample'
 	tempvar y_tild  
-	quietly gen `y_tild' = log(`depvar' + 1)
+	quietly gen `y_tild' = log(`depvar' + `delta') 
 	cap drop `new_sample'
 	quietly	hdfe `y_tild' , absorb(`absorb') generate(Y0_) sample(`new_sample') 
 quietly:	keep if `new_sample'
@@ -176,41 +179,60 @@ di "q_hat too far from 1"
 	_dots `k' 0
 	}
 	*** Calcul de la bonne matrice de variance-covariance
-
+	mata: xb_hat_M = PX*beta_initial 
+	mata: xb_hat_N = X*beta_initial
+	mata: fe = y_tilde - Py_tilde + xb_hat_M - xb_hat_N
+*	mata: P_eta = Py_tilde + xb_hat_M
+*	cap drop P_eta 
+*	quietly mata: st_addvar("double", "P_eta")
+*	mata: st_store(.,"P_eta",P_eta)
+	mata: xb_hat = xb_hat_N + fe :+ alpha 
+	*mata : constant_c = mean(log(y + `delta'*exp(xb_hat :+ alpha)) -xb_hat :- alpha)
+	*mata: Pu = exp(P_eta :+ constant_c) :-`delta'
+*	cap drop xb_hat 
+*	quietly mata: st_addvar("double", "xb_hat")
+*	mata: st_store(.,"xb_hat",xb_hat)
+mata: ui = y:*exp(-xb_hat)
+mata: weight = ui:/(ui :+ `delta')
+	//mata: weight =  Pu:/(Pu :+`delta')
  *** Calcul de la matrice de variance-covariance
- 	foreach var in `indepvar' {     // rename variables for last ols
+  	foreach var in `indepvar' {     // rename variables for last ols
 	quietly	rename `var' TEMP_`var'
 	quietly	rename M0_`var' `var'
-	}	
+	}
 cap _crcslbl Y0_ `depvar'
-	quietly reg Y0_ `indepvar' if `touse' [`weight'`exp'], `option'  noconstant
-	* Calcul du "bon" residu
-	quietly predict xb_hat, xb 
-	quietly gen ui = `depvar'*exp(-xb_hat)
-	quietly gen weight = ui/(`delta'+ ui)
-	mata : weight= st_data(.,"weight")
+ quietly: reg Y0_ `indepvar'  if `touse' [`weight'`exp'], `option' noconstant 
+ local df_r = e(df_r) - `df_a'
+ * Calcul du "bon" residu
+	matrix beta_final = e(b) // 
+	matrix Sigma = (e(df_r) / `df_r')*e(V)
+	*cap drop xb_hat
+	*quietly predict xb_hat, xb
+	*cap drop ui
+*quietly gen ui = `depvar'*exp(-xb_hat)
+	*mata : ui= st_data(.,"ui")
+*	quietly gen ui = `depvar'*exp(-xb_hat)
+*	quietly gen weight = ui/(`delta'+ ui)
+*	mata : weight= st_data(.,"weight")
 *** rename variables
 	foreach var in `indepvar' {      // rename variables back
 	quietly	rename `var' M0_`var'
 	quietly	rename TEMP_`var' `var'
 	}
 * Calcul de Sigma_0, de I-W, et de Sigma_tild
-	matrix beta_final = e(b) // 	mata: st_matrix("beta_final", beta_new)
-	matrix Sigma = e(V)
 	mata : Sigma_hat = st_matrix("Sigma")
-	mata : Sigma_0 = (cross(PX,PX):/rows(PX))*Sigma_hat*(cross(PX,PX):/rows(PX)) // recover original HAC 
-	mata : invXpIWX = invsym(cross(PX, weight, PX):/rows(PX)) 
+	mata : Sigma_0 = (cross(PX,PX))*Sigma_hat*(cross(PX,PX)) // recover original HAC 
+	mata : invXpIWX = invsym(cross(PX, weight,PX)) 
 	mata : Sigma_tild = invXpIWX*Sigma_0*invXpIWX
 	mata: Sigma_tild = (Sigma_tild+Sigma_tild'):/2
     mata: st_matrix("Sigma_tild", Sigma_tild) // used in practice
 	*** Stocker les resultats dans une matrice
-	local names : colnames e(b)
+	local names : colnames beta_final
 	local nbvar : word count `names'
 	mat rownames Sigma_tild = `names' 
     mat colnames Sigma_tild = `names' 
-   ereturn post beta_final Sigma_tild , obs(`=e(N)') depname(`depvar') esample(`touse')  dof(`=e(df_r)')
+   ereturn post beta_final Sigma_tild , obs(`=e(N)') depname(`depvar') esample(`touse')  dof(`df_r')
    restore 
-   
 ereturn scalar delta = `delta'
 ereturn scalar eps =   `eps'
 ereturn scalar niter =  `k'
