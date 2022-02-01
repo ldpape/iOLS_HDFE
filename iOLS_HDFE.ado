@@ -4,6 +4,7 @@
 * 22/12/2021 : coded with matrix multiplication instead of pre-canned program
 * 22/12/2021 : added convergence control (limit and maximum)
 * 04/01/2022 : added constant + checks for convergence
+* 01/02/2022 : post estimation variables
 cap program drop iOLS_HDFE
 program define iOLS_HDFE, eclass 
 syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMit(real 1e-8)  MAXimum(real 10000) ABSorb(string)  Robust CLuster(string)]        
@@ -11,9 +12,6 @@ syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMi
 //	syntax [anything] [if] [in] [aweight pweight fweight iweight] [, DELta(real 1)  ABSorb(string) LIMit(real 0.00001) MAXimum(real 1000) Robust CLuster(varlist numeric)]
 	marksample touse
 	markout `touse'  `cluster', s     
-
-	preserve
-	quietly keep if `touse'
 	if  "`robust'" !="" {
 		local opt1  = "`robust' "
 	}
@@ -29,8 +27,8 @@ syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMi
 	gettoken depvar list_var : list_var
 	//gettoken indepvar list_var : list_var, p("(")
 	gettoken _rhs list_var : list_var, p("(")
-foreach var of varlist  `_rhs' {
-quietly drop if missing(`var')	
+foreach var of varlist `depvar' `_rhs' {
+quietly replace `touse' = 0 if missing(`var')	
 }
 *** check seperation : code from "ppml"
  tempvar zeros                            																						// Creates regressand for first step
@@ -83,7 +81,7 @@ cap drop `group'
  local _enne = `_enne' - r(sum)                                                                                // Number of observations dropped
  di in green "Number of observations excluded: `_enne'" 
  local _enne =  r(sum)
-quietly keep if `touse'	
+*quietly keep if `touse'	
 	** drop collinear variables
 		tempvar cste
 	gen `cste' = 1
@@ -94,14 +92,14 @@ quietly keep if `touse'
 	cap drop Y0_*
 	cap drop xb_hat*
 	tempvar new_sample
-	quietly hdfe `var_list' [`weight'] , absorb(`absorb') generate(M0_) sample(`new_sample') 
+	quietly hdfe `var_list' if `touse' [`weight'] , absorb(`absorb') generate(M0_) sample(`new_sample') 
 local df_a = e(df_a)
-quietly:	keep if `new_sample'
+quietly:	replace `touse' = 1 if `new_sample'
 	tempvar y_tild  
 	quietly gen `y_tild' = log(`depvar' + `delta') 
 	cap drop `new_sample'
-	quietly	hdfe `y_tild' , absorb(`absorb') generate(Y0_) sample(`new_sample') 
-quietly:	keep if `new_sample'
+	quietly	hdfe `y_tild' if `touse'  , absorb(`absorb') generate(Y0_) sample(`new_sample') 
+quietly:	replace `touse' = 1 if `new_sample'
 	mata : X=.
 	mata : PX=.
 	mata : y_tilde =.
@@ -135,7 +133,7 @@ quietly:	keep if `new_sample'
 	quietly mata: st_addvar("double", "`y_tild'")
 	mata: st_store(.,"`y_tild'",y_tilde)
 	cap drop Y0_
-    quietly hdfe `y_tild' [`weight'] , absorb(`absorb') generate(Y0_)
+    quietly hdfe `y_tild' if `touse'  [`weight'] , absorb(`absorb') generate(Y0_)
 	mata : st_view(Py_tilde,.,"Y0_")
 	* OLS
 	mata: beta_new = invPXPX*cross(PX,Py_tilde)
@@ -232,7 +230,17 @@ cap _crcslbl Y0_ `depvar'
 	mat rownames Sigma_tild = `names' 
     mat colnames Sigma_tild = `names' 
    ereturn post beta_final Sigma_tild , obs(`=e(N)') depname(`depvar') esample(`touse')  dof(`df_r')
-   restore 
+	cap drop iOLS_HDFE_xb_hat
+	cap drop iOLS_HDFE_fe
+	cap drop iOLS_HDFE_error
+	quietly mata: st_addvar("double", "iOLS_HDFE_xb_hat")
+	mata: st_store(.,"iOLS_HDFE_xb_hat",xb_hat_N)
+	quietly mata: st_addvar("double", "iOLS_HDFE_fe")
+	mata: st_store(.,"iOLS_HDFE_fe",fe)
+		quietly mata: st_addvar("double", "iOLS_HDFE_error")
+	mata: st_store(.,"iOLS_HDFE_error",ui)
+cap drop Y0_*
+cap drop M0_*   
 ereturn scalar delta = `delta'
 ereturn scalar eps =   `eps'
 ereturn scalar niter =  `k'
