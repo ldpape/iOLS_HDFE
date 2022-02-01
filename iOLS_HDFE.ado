@@ -4,7 +4,7 @@
 * 22/12/2021 : coded with matrix multiplication instead of pre-canned program
 * 22/12/2021 : added convergence control (limit and maximum)
 * 04/01/2022 : added constant + checks for convergence
-* 01/02/2022 : post estimation variables
+* 01/02/2022 : drop preserve + post estimation variables
 cap program drop iOLS_HDFE
 program define iOLS_HDFE, eclass 
 syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMit(real 1e-8)  MAXimum(real 10000) ABSorb(string)  Robust CLuster(string)]        
