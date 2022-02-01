@@ -105,11 +105,11 @@ quietly:	replace `touse' = 1 if `new_sample'
 	mata : y_tilde =.
 	mata : Py_tilde =.
 	mata : y =.
-	mata : st_view(X,.,"`var_list'")
-	mata : st_view(PX,.,"M0_*")
-	mata : st_view(y_tilde,.,"`y_tild'")
-	mata : st_view(Py_tilde,.,"Y0_")
-	mata : st_view(y,.,"`depvar'")	
+	mata : st_view(X,.,"`var_list'",`touse')
+	mata : st_view(PX,.,"M0_*",`touse')
+	mata : st_view(y_tilde,.,"`y_tild'",`touse')
+	mata : st_view(Py_tilde,.,"Y0_",`touse')
+	mata : st_view(y,.,"`depvar'",`touse')	
 	* prepare  future inversions 
 	mata : invPXPX = invsym(cross(PX,PX))
 	mata : beta_initial = invPXPX*cross(PX,Py_tilde)
@@ -134,7 +134,7 @@ quietly:	replace `touse' = 1 if `new_sample'
 	mata: st_store(.,"`y_tild'",y_tilde)
 	cap drop Y0_
     quietly hdfe `y_tild' if `touse'  [`weight'] , absorb(`absorb') generate(Y0_)
-	mata : st_view(Py_tilde,.,"Y0_")
+	mata : st_view(Py_tilde,.,"Y0_",`touse')
 	* OLS
 	mata: beta_new = invPXPX*cross(PX,Py_tilde)
 	mata: criteria = mean(abs(beta_initial - beta_new):^(2))
