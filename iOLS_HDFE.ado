@@ -32,14 +32,14 @@ quietly replace `touse' = 0 if missing(`var')
 }
 *** check seperation : code from "ppml"
  tempvar zeros                            																						// Creates regressand for first step
- quietly: gen `zeros'=1 	
+ quietly: gen `zeros'=1 
 foreach var of varlist `absorb'{
 tempvar group 
 quietly egen `group' = group(`var')
 tempvar max_group 
-bys `group' : egen `max_group' = max(`depvar') if `touse'
+quietly bys `group' : egen `max_group' = max(`depvar') if `touse'
 tempvar min_group 
-bys `group' : egen `min_group' = min(`depvar') if `touse'
+quietly bys `group' : egen `min_group' = min(`depvar') if `touse'
 quietly: replace `zeros' = 0 if `min_group' == 0  & `max_group' == 0 & `touse'
 cap drop `group'
 }
@@ -105,11 +105,11 @@ quietly:	replace `touse' = 1 if `new_sample'
 	mata : y_tilde =.
 	mata : Py_tilde =.
 	mata : y =.
-	mata : st_view(X,.,"`var_list'",`touse')
-	mata : st_view(PX,.,"M0_*",`touse')
-	mata : st_view(y_tilde,.,"`y_tild'",`touse')
-	mata : st_view(Py_tilde,.,"Y0_",`touse')
-	mata : st_view(y,.,"`depvar'",`touse')	
+	mata : st_view(X,.,"`var_list'","`touse'")
+	mata : st_view(PX,.,"M0_*","`touse'")
+	mata : st_view(y_tilde,.,"`y_tild'","`touse'")
+	mata : st_view(Py_tilde,.,"Y0_","`touse'")
+	mata : st_view(y,.,"`depvar'","`touse'")	
 	* prepare  future inversions 
 	mata : invPXPX = invsym(cross(PX,PX))
 	mata : beta_initial = invPXPX*cross(PX,Py_tilde)
@@ -130,11 +130,12 @@ quietly:	replace `touse' = 1 if `new_sample'
 	mata: alpha = log(mean(y:*exp(-xb_hat)))
 	mata: y_tilde = log(y + `delta'*exp(xb_hat :+ alpha )) :-mean(log(y + `delta'*exp(xb_hat :+ alpha)) -xb_hat :- alpha  )
 	cap drop `y_tild' 
-	quietly mata: st_addvar("double", "`y_tild'")
-	mata: st_store(.,"`y_tild'",y_tilde)
+	*quietly mata: st_addvar("double", "`y_tild'")
+	*mata: st_store(.,"`y_tild'",y_tilde)
+	mata: st_store(., st_addvar("double", "`y_tild'"), "`touse'", y_tilde)
 	cap drop Y0_
     quietly hdfe `y_tild' if `touse'  [`weight'] , absorb(`absorb') generate(Y0_)
-	mata : st_view(Py_tilde,.,"Y0_",`touse')
+	mata : st_view(Py_tilde,.,"Y0_","`touse'")
 	* OLS
 	mata: beta_new = invPXPX*cross(PX,Py_tilde)
 	mata: criteria = mean(abs(beta_initial - beta_new):^(2))
@@ -229,16 +230,22 @@ cap _crcslbl Y0_ `depvar'
 	local nbvar : word count `names'
 	mat rownames Sigma_tild = `names' 
     mat colnames Sigma_tild = `names' 
+		cap drop _COPY
+	quietly: gen _COPY = `touse'
    ereturn post beta_final Sigma_tild , obs(`=e(N)') depname(`depvar') esample(`touse')  dof(`df_r')
 	cap drop iOLS_HDFE_xb_hat
 	cap drop iOLS_HDFE_fe
 	cap drop iOLS_HDFE_error
-	quietly mata: st_addvar("double", "iOLS_HDFE_xb_hat")
-	mata: st_store(.,"iOLS_HDFE_xb_hat",xb_hat_N)
-	quietly mata: st_addvar("double", "iOLS_HDFE_fe")
-	mata: st_store(.,"iOLS_HDFE_fe",fe)
-		quietly mata: st_addvar("double", "iOLS_HDFE_error")
-	mata: st_store(.,"iOLS_HDFE_error",ui)
+	*quietly mata: st_addvar("double", "iOLS_HDFE_xb_hat")
+	*mata: st_store(.,"iOLS_HDFE_xb_hat",xb_hat_N)
+	*quietly mata: st_addvar("double", "iOLS_HDFE_fe")
+	*mata: st_store(.,"iOLS_HDFE_fe",fe)
+*		quietly mata: st_addvar("double", "iOLS_HDFE_error")
+*	mata: st_store(.,"iOLS_HDFE_error",ui)
+		    mata: st_store(., st_addvar("double", "iOLS_HDFE_fe"), "_COPY", fe)
+	    mata: st_store(., st_addvar("double", "iOLS_HDFE_error"), "_COPY", ui)
+    	mata: st_store(., st_addvar("double", "iOLS_HDFE_xb_hat"),"_COPY", xb_hat_N)
+		cap drop _COPY
 cap drop Y0_*
 cap drop M0_*   
 ereturn scalar delta = `delta'
