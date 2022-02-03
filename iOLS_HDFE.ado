@@ -26,66 +26,39 @@ syntax varlist [if] [in] [aweight pweight fweight iweight] [, DELta(real 1) LIMi
 	* get depvar and indepvar
 	gettoken depvar list_var : list_var
 	//gettoken indepvar list_var : list_var, p("(")
-	gettoken _rhs list_var : list_var, p("(")
+gettoken _rhs list_var : list_var, p("(")
 foreach var of varlist `depvar' `_rhs' {
 quietly replace `touse' = 0 if missing(`var')	
 }
-*** check seperation : code from "ppml"
- tempvar zeros                            																						// Creates regressand for first step
- quietly: gen `zeros'=1 
-foreach var of varlist `absorb'{
-tempvar group 
-quietly egen `group' = group(`var')
-tempvar max_group 
-quietly bys `group' : egen `max_group' = max(`depvar') if `touse'
-tempvar min_group 
-quietly bys `group' : egen `min_group' = min(`depvar') if `touse'
-quietly: replace `zeros' = 0 if `min_group' == 0  & `max_group' == 0 & `touse'
-cap drop `group'
+loc tol = 1e-5
+tempvar u w xb e
+quietly: gen `u' =  !`depvar' if `touse'
+quietly: su `u'  if `touse', mean
+loc K = ceil(r(sum) / `tol' ^ 2)
+quietly: gen `w' = cond(`depvar', `K', 1)  if `touse'
+while 1 {
+	*qui reghdfe u [fw=w], absorb(id1 id2) resid(e)
+quietly:	reghdfe `u' `_rhs' [fw=`w']  if `touse' , absorb(`absorb') resid(`e')
+quietly:	predict double `xb'  if `touse', xbd
+quietly:	replace `xb' = 0 if (abs(`xb') < `tol')&(`touse')
+
+	* Stop once all predicted values become non-negative
+quietly:	 cou if (`xb' < 0) & (`touse')
+	if !r(N) {
+		continue, break
+	}
+
+quietly:	replace `u' = max(`xb', 0)  if `touse'
+quietly:	drop `xb' `w'
 }
- tempvar logy                            																						// Creates regressand 
- quietly: gen `logy'=log(`depvar') if (`touse')&(`depvar'>0)
- quietly: reghdfe `logy' `_rhs'    if (`touse')&(`depvar'>0)	, absorb(`absorb')   nosample
-// quietly: replace `touse' = 0 if (e(sample)==0) & (`touse')&(`depvar'>0)
-// Initialize observations selector
- local _drop ""                                                                                                // List of regressors to exclude
- local indepvar ""     
-    foreach x of varlist `_rhs' {   
-      if (_se[`x']==0) {                                                                                       // Try to include regressors dropped in the
-          qui summarize `x' if (`depvar'>0)&(`touse'), meanonly
-          local _mean=r(mean)
-          qui summarize `x' if (`depvar'==0)&(`touse')
-          if (r(min)<`_mean')&(r(max)>`_mean'){                                            // Include regressor if conditions met and
-              local indepvar "`indepvar' `x'"                                                                        // strict is off 
-          }
-          else{
-              qui su `x' if `touse', d                                                                         // Otherwise, drop regressor
-              local _mad=r(p50)
-              qui inspect  `x'  if `touse'                                                                         
-              qui replace `zeros'=0 if (`x'!=`_mad')&(r(N_unique)==2)&(`touse')                                // Mark observations to drop
-              local _drop "`_drop' `x'"
-          }
-      }                                                                                                        // End of LOOP 1.1 
-      if _se[`x']>0 {                                                                                          // Include safe regressors: LOOP 1.2
-      local indepvar "`indepvar' `x'" 
-      }                                                                                                        // End LOOP 1.2
-    }   
- qui su `touse' if `touse', mean                                                                               // Summarize touse to obtain N
- local _enne=r(sum)                                                                                            // Save N
- qui replace `touse'=0 if (`zeros'==0)&("`keep'"=="")&(`depvar'==0)&(`touse')                                  // Drop observations with perfect fit
- di                                                                                                              // if keep is off
- local k_excluded : word count `_drop'                                                                      // Number of variables causing perfect fit
- di in green "Number of non-absorbed regressors excluded to ensure that the estimates exist: `k_excluded'" 
- if ("`_drop'" != "") di "Excluded regressors: `_drop'"                                                        // List dropped variables if any
- qui su `touse' if `touse', mean
- local _enne = `_enne' - r(sum)                                                                                // Number of observations dropped
- di in green "Number of observations excluded: `_enne'" 
- local _enne =  r(sum)
+*quielty: gen is_sep = `xb' > 0
+quietly: replace `touse'  = (`xb' <= 0) // & (`touse')
+
 *quietly keep if `touse'	
 	** drop collinear variables
 		tempvar cste
-	gen `cste' = 1
-    _rmcoll `indepvar' `cste' , forcedrop 
+quietly:	gen `cste' = 1
+    _rmcoll `_rhs' `cste' , forcedrop 
 	local var_list `r(varlist)'
 		*** FWL Theorem Application
 	cap drop M0_*
@@ -195,12 +168,12 @@ mata: ui = y:*exp(-xb_hat)
 mata: weight = ui:/(ui :+ `delta')
 	//mata: weight =  Pu:/(Pu :+`delta')
  *** Calcul de la matrice de variance-covariance
-  	foreach var in `indepvar' {     // rename variables for last ols
+  	foreach var in `var_list' {     // rename variables for last ols
 	quietly	rename `var' TEMP_`var'
 	quietly	rename M0_`var' `var'
 	}
 cap _crcslbl Y0_ `depvar'
- quietly: reg Y0_ `indepvar'  if `touse' [`weight'`exp'], `option' noconstant 
+ quietly: reg Y0_ `var_list'  if `touse' [`weight'`exp'], `option' noconstant 
  local df_r = e(df_r) - `df_a'
  * Calcul du "bon" residu
 	matrix beta_final = e(b) // 
@@ -214,7 +187,7 @@ cap _crcslbl Y0_ `depvar'
 *	quietly gen weight = ui/(`delta'+ ui)
 *	mata : weight= st_data(.,"weight")
 *** rename variables
-	foreach var in `indepvar' {      // rename variables back
+	foreach var in `var_list' {      // rename variables back
 	quietly	rename `var' M0_`var'
 	quietly	rename TEMP_`var' `var'
 	}
